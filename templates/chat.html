@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Project V – Chat{% endblock %}
+
+{% block extra_css %}
+  .chat-page-shell {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 20px 0 0;
+    height: calc(100vh - 144px);
+    display: flex;
+  }
+
+  .sidebar-chat {
+    width: 230px;
+    background: #020617;
+    border-right: 1px solid #111827;
+    padding: 18px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    font-size: 15px;
+    height: 100%;
+    overflow-y: auto;
+  }
+
+  .sb-btn {
+    padding: 9px 12px;
+    border-radius: 999px;
+    border: 1px solid #1f2937;
+    background: #020617;
+    color: #e5e7eb;
+    font-size: 15px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+  }
+  .sb-btn:hover { border-color: #38bdf8; }
+
+  .sb-section-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    color: #6b7280;
+    padding: 4px 4px;
+    margin-top: 8px;
+  }
+
+  .sb-list {
+    list-style: none;
+    font-size: 14px;
+    color: #9ca3af;
+  }
+  .sb-list li {
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .sb-list li:hover {
+    background: #0b1120;
+    color: #e5e7eb;
+  }
+
+  .chat-main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #050816;
+    height: 100%;
+    position: relative;
+  }
+
+  .chat-scroll {
+    flex: 1;
+    padding: 20px 26px;
+    overflow-y: auto;
+    font-size: 16px;
+  }
+
+  .chat-scroll::-webkit-scrollbar { width: 10px; }
+  .chat-scroll::-webkit-scrollbar-track { background: #020617; }
+  .chat-scroll::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 999px; }
+  .chat-scroll::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+  .msg {
+    padding: 22px 20px;
+    display: flex;
+    gap: 16px;
+    border-radius: 14px;
+    margin-bottom: 10px;
+    background: #020617;
+  }
+
+  .avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+  .avatar-user { background: #0f172a; color: #9ca3af; }
+  .avatar-bot { background: linear-gradient(135deg, #38bdf8, #6366f1); color: white; }
+
+  .msg-body {
+    flex: 1;
+    line-height: 1.8;
+    color: #e5e7eb;
+    white-space: pre-wrap;
+    font-size: 17px;
+  }
+
+  .input-bar-chat {
+    border-top: 1px solid #111827;
+    background: linear-gradient(to top, #020617, rgba(2,6,23,0.96));
+    padding: 14px 24px 18px;
+    position: sticky;
+    bottom: 0;
+  }
+
+  .input-inner-chat {
+    max-width: 880px;
+    margin: 0 auto;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  #chat-input {
+    flex: 1;
+    border-radius: 999px;
+    border: 1px solid #1f2937;
+    background: #020617;
+    color: #e5e7eb;
+    padding: 13px 18px;
+    font-size: 17px;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  #chat-input::placeholder { color: #6b7280; }
+  #chat-input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+  }
+
+  #chat-send {
+    border-radius: 999px;
+    border: none;
+    background: linear-gradient(135deg, #38bdf8, #6366f1);
+    color: white;
+    padding: 11px 24px;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  #chat-send:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(56, 189, 248, 0.3);
+  }
+
+  .hint-chat {
+    text-align: center;
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 6px;
+  }
+
+  @media (max-width: 900px) {
+    .sidebar-chat { display: none; }
+  }
+{% endblock %}
+
+{% block content %}
+  <div class="chat-page-shell">
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar-chat">
+      \n
+      <button class="sb-btn" id="new-chat-btn">+ New chat</button>
+
+      <div>
+        <div class="sb-section-title">Recent</div>
+        <ul class="sb-list">
+          <li data-recent="Give me a balanced review of RRR movie">RRR movie review</li>
+          <li data-recent="Suggest 5 UPSC essay topics with brief outlines">UPSC essay ideas</li>
+          <li data-recent="Help me track latest notifications for SSC exam results">Exam result tracker</li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="sb-section-title">Automations</div>
+        <ul class="sb-list">
+          <li onclick="window.location.href='/automation'">🎬 Movie ticket alerts</li>
+          <li onclick="window.location.href='/automation'">📢 Exam result alerts</li>
+          <li onclick="window.location.href='/automation'">💸 Price drop alerts</li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- MAIN CHAT AREA -->
+    <div class="chat-main-area">
+      <div id="chat-scroll" class="chat-scroll"></div>
+
+      <div class="input-bar-chat">
+        <div class="input-inner-chat">
+          <input id="chat-input" type="text" placeholder="Ask Project‑V anything..." />
+          <button id="chat-send">Send</button>
+        </div>
+        <div class="hint-chat">Project‑V can make mistakes. Check important info.</div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    const chatScroll = document.getElementById("chat-scroll");
+    const chatInput = document.getElementById("chat-input");
+    const chatSend = document.getElementById("chat-send");
+    const newChatBtn = document.getElementById("new-chat-btn");
+    const recentItems = document.querySelectorAll("[data-recent]");
+
+    const firstQuestion = "{{ first_question|e }}";
+
+    function addMessage(text, isUser) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "msg";
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar " + (isUser ? "avatar-user" : "avatar-bot");
+      avatar.textContent = isUser ? "U" : "V";
+
+      const body = document.createElement("div");
+      body.className = "msg-body";
+      body.textContent = text;
+
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(body);
+      chatScroll.appendChild(wrapper);
+      if (isUser) {
+      chatScroll.scrollTop = chatScroll.scrollHeight;
+     }
+    }
+
+    async function sendToProjectV(message) {
+      addMessage(message, true);
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+        const data = await res.json();
+        if (data.reply) {
+          addMessage(data.reply, false);
+        } else {
+          addMessage("Error: " + (data.error || "Unknown"), false);
+        }
+      } catch (err) {
+        addMessage("Network error", false);
+      }
+    }
+
+    function handleSend() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      chatInput.value = "";
+      sendToProjectV(text);
+    }
+
+    chatSend.onclick = handleSend;
+    chatInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") handleSend();
+    });
+
+    if (firstQuestion) {
+      sendToProjectV(firstQuestion);
+    }
+
+    newChatBtn.onclick = async () => {
+      try {
+        await fetch("/api/new_chat", { method: "POST" });
+      } catch (e) {}
+      window.location.href = "/chat";
+    };
+
+    function openRecent(prompt) {
+      fetch("/api/new_chat", { method: "POST" })
+        .finally(() => {
+          const encoded = encodeURIComponent(prompt);
+          window.location.href = `/chat?q=${encoded}`;
+        });
+    }
+
+    recentItems.forEach(li => {
+      li.addEventListener("click", () => {
+        const prompt = li.getAttribute("data-recent");
+        if (prompt) openRecent(prompt);
+      });
+    });
+  </script>
+{% endblock %}
