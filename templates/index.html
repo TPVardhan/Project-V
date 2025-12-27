@@ -2,7 +2,6 @@
 
 {% block content_class %}content-home{% endblock %}
 
-
 {% block extra_css %}
   .page-home {
     min-height: calc(100vh - 64px);
@@ -11,9 +10,17 @@
     background: radial-gradient(circle at top left, #0f172a 0, #020617 40%, #020617 100%);
   }
 
+  /* Wrap main content for nicer desktop + mobile */
+  .pv-main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px;
+    width: 100%;
+  }
+
   .hero {
     flex: 1;
-    padding: 60px 7% 40px;
+    padding: 60px 0 40px;
     display: grid;
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
     gap: 48px;
@@ -150,6 +157,7 @@
     margin-top: 20px;
   }
 
+  /* Tablet: single column but still nice spacing */
   @media (max-width: 900px) {
     .hero {
       grid-template-columns: minmax(0, 1fr);
@@ -157,45 +165,82 @@
       row-gap: 32px;
     }
   }
+
+  /* Phone: full-width inputs/buttons, center content */
+  @media (max-width: 768px) {
+    .page-home {
+      min-height: 100vh;
+    }
+
+    .hero {
+      padding: 32px 0 24px;
+    }
+
+    .title {
+      font-size: 30px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      max-width: 100%;
+    }
+
+    .ask-row {
+      flex-direction: column;
+    }
+
+    .ask-btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .footer-home {
+      flex-direction: column;
+      gap: 4px;
+      text-align: center;
+      padding: 12px 16px 18px;
+    }
+  }
 {% endblock %}
 
 {% block content %}
   <div class="page-home">
-    <main class="hero">
-      <section>
-        <div class="badge">
-          <span class="badge-dot"></span>
-          <span>Inside Project‑V NeuCase</span>
-        </div>
-        <h1 class="title">The <span>AI assistant</span> shaping your future</h1>
-        <p class="subtitle">
-          Ask anything, automate repetitive checks, and get notified when it matters.
-          Project‑V keeps an eye on the web so you can focus on real work.
-        </p>
+    <div class="pv-main">
+      <main class="hero">
+        <section>
+          <div class="badge">
+            <span class="badge-dot"></span>
+            <span>Inside Project‑V NeuCase</span>
+          </div>
+          <h1 class="title">The <span>AI assistant</span> shaping your future</h1>
+          <p class="subtitle">
+            Ask anything, automate repetitive checks, and get notified when it matters.
+            Project‑V keeps an eye on the web so you can focus on real work.
+          </p>
 
-        <div class="ask-row">
-          <input id="user-input" class="ask-input" type="text"
-                 placeholder="Ask Project‑V anything..." />
-          <button id="send-btn" class="ask-btn">
-            <span>Ask now</span> <span>↗</span>
-          </button>
-        </div>
-      </section>
+          <div class="ask-row">
+            <input id="user-input" class="ask-input" type="text"
+                   placeholder="Ask Project‑V anything..." />
+            <button id="send-btn" class="ask-btn">
+              <span>Ask now</span> <span>↗</span>
+            </button>
+          </div>
+        </section>
 
-      <aside class="hero-card"
-             onclick="window.location.href='/automation'"
-             style="cursor: pointer;">
-        <div class="hero-image">
-          <div class="hero-image-inner"></div>
-        </div>
-        <div class="hero-card-title">Automate life</div>
-        <p class="hero-card-text">
-          Set up auto‑monitoring, alerts, and smart tasks in minutes. From movie tickets
-          to exam results and price drops, Project‑V watches the web and notifies you instantly.
-        </p>
-      </aside>
-
-    </main>
+        <aside class="hero-card"
+               onclick="window.location.href='/automation'"
+               style="cursor: pointer;">
+          <div class="hero-image">
+            <div class="hero-image-inner"></div>
+          </div>
+          <div class="hero-card-title">Automate life</div>
+          <p class="hero-card-text">
+            Set up auto‑monitoring, alerts, and smart tasks in minutes. From movie tickets
+            to exam results and price drops, Project‑V watches the web and notifies you instantly.
+          </p>
+        </aside>
+      </main>
+    </div>
 
     <footer class="footer-home">
       <span>Project‑V • Early preview</span>
