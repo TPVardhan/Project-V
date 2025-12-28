@@ -272,12 +272,21 @@ def _fetch_url_with_retry(url: str, timeout: int = 8, max_tries: int = 2):
     # All attempts failed
     return last_exc, True
 
+def extract_keywords_from_text(text: str) -> list:
+    """Extract main keywords from description text."""
+    if not text:
+        return []
+    tokens = text_to_tokens(text)
+    # Filter to words that are 3+ characters (meaningful words)
+    keywords = [t for t in tokens if len(t) >= 3]
+    return keywords[:5]  # Return top 5
+
+
 def check_automations():
     print("CHECK_AUTOMATIONS RUNNING")
 
     with app.app_context():
         db = get_db()
-        # Only check active tasks; completed/paused are ignored
         rows = db.execute(
             "SELECT * FROM automations WHERE status = 'active'"
         ).fetchall()
@@ -307,13 +316,19 @@ def check_automations():
             if not all_keywords and single_keyword:
                 all_keywords.append(single_keyword)
 
+            # FOOLPROOF FIX: If keywords still empty, extract from description
+            if not all_keywords:
+                extracted = extract_keywords_from_text(row["description"])
+                if extracted:
+                    all_keywords.extend(extracted)
+
+            # Skip only if no URL, but KEEP the task
             if not url or not all_keywords:
                 continue
 
             matched_keyword = None
 
             try:
-                # Fetch with retry (helps when UPSC/SSC is briefly slow)
                 resp, failed = _fetch_url_with_retry(url, timeout=8, max_tries=2)
 
                 if failed:
@@ -326,7 +341,6 @@ def check_automations():
 
                         found = False
 
-                        # 1) Prefer direct substring match of intent phrases
                         for k in all_keywords:
                             if not isinstance(k, str):
                                 continue
@@ -336,16 +350,12 @@ def check_automations():
                                 matched_keyword = k
                                 break
 
-                        # 2) If not found, use smarter token overlap
                         if not found:
                             is_example = "example.com" in (url or "").lower()
-                            # More lenient for example.com demo tasks
                             demo_threshold = 0.3 if is_example else 0.6
 
                             for k in all_keywords:
-                                if keyword_matches_page(
-                                    k, body_text, threshold=demo_threshold
-                                ):
+                                if keyword_matches_page(k, body_text, threshold=demo_threshold):
                                     found = True
                                     matched_keyword = k
                                     break
@@ -368,7 +378,6 @@ def check_automations():
             previous_state = row["status"]
             previous_last_status = row["last_status"]
 
-            # If triggered: send one notification and mark automation as completed (stop future checks)
             if last_status == "triggered" and previous_state == "active":
                 msg = f"Automation #{row['id']}: keyword found"
                 detail_keyword = matched_keyword if matched_keyword else all_keywords[0]
@@ -386,8 +395,6 @@ def check_automations():
                     (last_status, last_checked, row["id"]),
                 )
             else:
-                # For the very first run (still pending), hide transient errors/http_xxx;
-                # only update last_checked so the UI stays as "pending" until a proper result.
                 if previous_last_status == "pending" and last_status not in ("triggered", "not_found"):
                     db.execute(
                         """
@@ -408,6 +415,7 @@ def check_automations():
                     )
 
         db.commit()
+
 
 scheduler.add_job(check_automations, "interval", minutes=1)
 
