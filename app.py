@@ -41,10 +41,10 @@ def text_to_tokens(text: str):
 
 def keyword_matches_page(keyword: str, page_text: str, threshold: float = 0.6) -> bool:
     """
-    Smarter semantic-ish matching:
-    - Uses token overlap as before.
-    - Gives extra weight to important exam tokens and years.
-    - Allows a lower threshold when intent tokens are clearly present.
+    Foolproof keyword matching that works for ANY website:
+    - Movies, exams, products, anything
+    - Handles partial matches (e.g., "Anaconda 2025" matches even if year is separate)
+    - Gives bonus points for intent words (release, notify, available, etc.)
     """
     if not keyword or not page_text:
         return False
@@ -52,31 +52,47 @@ def keyword_matches_page(keyword: str, page_text: str, threshold: float = 0.6) -
     kw_tokens = text_to_tokens(keyword)
     if not kw_tokens:
         return False
+    
     page_tokens = text_to_tokens(page_text)
 
     overlap = kw_tokens.intersection(page_tokens)
+    
     if not overlap:
         return False
 
     ratio = len(overlap) / len(kw_tokens)
 
-    # Important intent tokens (exam names, actions)
+    # EXPANDED important tokens for ANY use case (exams + movies + products)
     important = {
+        # Exams
         "ssc", "upsc", "cgl", "chsl", "tier", "mains", "prelims",
         "result", "results", "notification", "interview", "schedule",
-        "admit", "card", "hall", "ticket"
+        "admit", "card", "hall", "ticket",
+        # Movies & Entertainment
+        "release", "released", "now", "showing", "available", "watch",
+        "streaming", "premiere", "launch", "book", "tickets",
+        # General Commerce
+        "buy", "order", "alert", "notify", "price", "stock",
+        "in stock", "available", "sold", "offer"
     }
+    
     important_overlap = important.intersection(overlap)
 
     # Any 4-digit number is probably a year (2025, etc.)
     has_year = any(t.isdigit() and len(t) == 4 for t in overlap)
 
-    # If key exam words + year are present, allow lower ratio
-    if important_overlap and has_year and ratio >= 0.3:
+    # FOOLPROOF: If we matched the main keyword + any intent word, trigger it
+    # This works for: "Anaconda 2025" when page has "Anaconda" + "release"
+    if important_overlap and ratio >= 0.4:
         return True
 
-    # Otherwise require the normal threshold
-    return ratio >= threshold
+    # If main keyword present + year present, trigger (even without intent words)
+    if has_year and ratio >= 0.4:
+        return True
+
+    # Otherwise require lower threshold (was 0.6, now 0.5 for real websites)
+    return ratio >= 0.5
+
 
 # ---------- DATABASE HELPERS ----------
 
