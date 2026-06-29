@@ -6,17 +6,18 @@ import requests
 from requests.exceptions import RequestException
 from flask import Flask, render_template, request, jsonify, g
 from dotenv import load_dotenv
-from openai import OpenAI
+from google import genai
 from apscheduler.schedulers.background import BackgroundScheduler
 import json
 
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = "gemini-2.5-flash"
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "project-v-secret-key-change-me")
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 scheduler = BackgroundScheduler()
 scheduler.start()
@@ -180,12 +181,16 @@ User instruction:
 "{instruction}"
 """
     try:
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
+        resp = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config={"temperature": 0.1},
         )
-        content = resp.choices[0].message.content.strip()
+        content = resp.text.strip()
+        if content.startswith("```"):
+            content = content.strip("`")
+            if content.lower().startswith("json"):
+                content = content[4:].strip()
         data = json.loads(content)
 
         site_domain = data.get("site_domain")
@@ -662,12 +667,12 @@ def api_chat():
         return jsonify({"error": "No message provided"}), 400
     
     try:
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": message}],
-            temperature=0.7,
+        resp = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=message,
+            config={"temperature": 0.7},
         )
-        reply = resp.choices[0].message.content.strip()
+        reply = resp.text.strip()
         return jsonify({"reply": reply}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

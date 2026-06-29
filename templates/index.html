@@ -286,7 +286,10 @@
 
     function goToChat() {
       const message = input.value.trim();
-      if (!message) return;
+      if (!message) {
+        window.location.href = `/chat`;
+        return;
+      }
       const encoded = encodeURIComponent(message);
       window.location.href = `/chat?q=${encoded}`;
     }
