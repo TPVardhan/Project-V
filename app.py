@@ -702,30 +702,4 @@ if __name__ == "__main__":
 def coming_soon():
     return render_template('coming_soon.html')
 
-#----------------------------------------------------
-@app.route('/api/notifications', methods=['GET'])
-def get_notifications():
-    try:
-        notifications = Notification.query.order_by(Notification.created_at.desc()).limit(50).all()
-        items = [{
-            'id': n.id,
-            'message': n.message,
-            'created_at': n.created_at.strftime('%Y-%m-%d %H:%M:%S') if n.created_at else ''
-        } for n in notifications]
-        return jsonify(items), 200
-    except Exception as e:
-        print(f"Error in get_notifications: {e}")
-        return jsonify([]), 200
-
-
-@app.route('/api/notifications/mark-read', methods=['POST'])
-def mark_notifications_read():
-    try:
-        Notification.query.update({'read': True})
-        db.session.commit()
-        return jsonify({'success': True}), 200
-    except Exception as e:
-        print(f"Error marking as read: {e}")
-        return jsonify({'error': str(e)}), 500
-#--------------------------------------------
 
