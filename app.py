@@ -17,7 +17,7 @@ GEMINI_MODEL = "gemini-2.5-flash"
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "project-v-secret-key-change-me")
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY, vertexai=False)
 
 scheduler = BackgroundScheduler()
 scheduler.start()
@@ -424,6 +424,9 @@ def check_automations():
 
 scheduler.add_job(check_automations, "interval", minutes=1)
 
+with app.app_context():
+    init_db()
+
 # ---------- ROUTES ----------
 
 @app.route("/")
@@ -689,9 +692,7 @@ def api_new_chat():
 # ---------- MAIN ----------
 
 if __name__ == "__main__":
-    with app.app_context():
-        init_db()
-    print("🚀 Project‑V started with run-until-trigger-then-stop behavior.")
+    print("Project-V started.")
     app.run(debug=True)
 # -----------------------
 

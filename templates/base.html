@@ -89,9 +89,9 @@
 </div>
 
     <nav class="top-nav">
-      <a href="/">Assistant</a>
-      <a href="/automation" class="active">Automation</a>
-      <a href="/chat">Chat</a>
+      <a href="/" class="{% if request.path == '/' %}active{% endif %}">Home</a>
+      <a href="/chat" class="{% if request.path == '/chat' %}active{% endif %}">AI Chat</a>
+      <a href="/automation" class="{% if request.path == '/automation' %}active{% endif %}">Automation</a>
       <div class="bell-container">
         <button class="top-bell" onclick="toggleNotificationDropdown()" title="Notifications">
           🔔
