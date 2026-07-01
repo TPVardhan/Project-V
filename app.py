@@ -222,7 +222,8 @@ User instruction:
             "backup_keywords": backup_keywords,
             "frequency_minutes": freq,
         }
-    except Exception:
+    except Exception as e:
+        print(f"[PARSE] Failed to parse automation instruction: {e}")
         return {
             "site_domain": None,
             "topic": instruction,
@@ -243,6 +244,47 @@ def resolve_initial_url(site_domain: str, topic: str) -> str | None:
         return "https://upsc.gov.in/exams-related-info/interview-schedule"
 
     return f"https://{domain.rstrip('/')}"
+
+def resolve_url_for_automation(description: str, keywords_json: str) -> str | None:
+    """
+    Ask Gemini to determine the best URL to monitor when none was specified at creation.
+    Returns a URL string, or None if the model can't determine one.
+    """
+    extra_context = ""
+    if keywords_json:
+        try:
+            kw_data = json.loads(keywords_json)
+            main_kw = kw_data.get("main_keyword", "")
+            if main_kw:
+                extra_context = f"\nMain keyword to watch for: {main_kw}"
+        except Exception:
+            pass
+
+    prompt = f"""You are helping a web monitoring system. Given the task description below, return the single best URL to monitor.
+
+Rules:
+- Return ONLY a valid URL starting with https://, no explanation, no JSON, no markdown.
+- Pick the most specific official page if known (e.g. results page, schedule page, product page).
+- If unsure of the exact page, return the official homepage of the relevant site.
+- Do NOT return https://example.com or any placeholder URL.
+
+Task: "{description}"{extra_context}
+"""
+    try:
+        resp = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config={"temperature": 0.0},
+        )
+        # Take the first token in case the model adds trailing text
+        candidate = resp.text.strip().split()[0]
+        if (candidate.startswith("http://") or candidate.startswith("https://")) and "example.com" not in candidate:
+            return candidate
+        print(f"[URL-RESOLVE] Model returned unusable value: {resp.text.strip()!r}")
+        return None
+    except Exception as e:
+        print(f"[URL-RESOLVE] Gemini call failed: {e}")
+        return None
 
 # ---------- REAL HTTP CHECKER + NOTIFICATIONS ----------
 
@@ -327,8 +369,36 @@ def check_automations():
                 if extracted:
                     all_keywords.extend(extracted)
 
-            # Skip only if no URL, but KEEP the task
-            if not url or not all_keywords:
+            # --- URL resolution ---
+            if not url:
+                print(f"[AUTO #{row['id']}] No URL set — calling AI to resolve for: {row['description'][:80]!r}")
+                resolved = resolve_url_for_automation(row["description"], keywords_json)
+                if resolved:
+                    print(f"[AUTO #{row['id']}] URL resolved to: {resolved}")
+                    db.execute(
+                        "UPDATE automations SET url = ?, last_checked = ? WHERE id = ?",
+                        (resolved, f"URL auto-resolved to {resolved} at {now_iso}", row["id"]),
+                    )
+                    db.commit()
+                    url = resolved
+                else:
+                    msg = f"No URL — AI could not resolve one at {now_iso}. Will retry next check."
+                    print(f"[AUTO #{row['id']}] {msg}")
+                    db.execute(
+                        "UPDATE automations SET last_status = 'no_url', last_checked = ? WHERE id = ?",
+                        (msg, row["id"]),
+                    )
+                    db.commit()
+                    continue
+
+            if not all_keywords:
+                msg = f"No keywords to match at {now_iso}"
+                print(f"[AUTO #{row['id']}] {msg}")
+                db.execute(
+                    "UPDATE automations SET last_status = 'no_keywords', last_checked = ? WHERE id = ?",
+                    (msg, row["id"]),
+                )
+                db.commit()
                 continue
 
             matched_keyword = None
@@ -376,9 +446,10 @@ def check_automations():
                         last_status = f"http_{status_code}"
                         last_checked = f"HTTP error {status_code} at {now_iso}"
 
-            except Exception:
+            except Exception as e:
+                print(f"[AUTO #{row['id']}] Unexpected error: {e}")
                 last_status = "error"
-                last_checked = f"Unexpected error at {now_iso}"
+                last_checked = f"Unexpected error at {now_iso}: {e}"
 
             previous_state = row["status"]
             previous_last_status = row["last_status"]
