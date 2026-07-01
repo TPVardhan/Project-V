@@ -14,11 +14,24 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = "gemini-2.5-flash"
 
+# Absolute path so the DB is always found regardless of working directory.
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "project_v.db")
+
+# Public URL used by the keep-alive ping. Render sets RENDER_EXTERNAL_URL
+# automatically; you can also set APP_URL manually in Render's env vars.
+RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL") or os.getenv("APP_URL")
+
+if not GEMINI_API_KEY:
+    print("WARNING: GEMINI_API_KEY is not set — AI parse and URL-resolve will fail silently.")
+
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "project-v-secret-key-change-me")
 
 client = genai.Client(api_key=GEMINI_API_KEY, vertexai=False)
 
+# Scheduler is started here for dev (python app.py).
+# Under Gunicorn, gunicorn.conf.py post_fork restarts it in the worker
+# because threads do not survive os.fork().
 scheduler = BackgroundScheduler()
 scheduler.start()
 
@@ -99,7 +112,7 @@ def keyword_matches_page(keyword: str, page_text: str, threshold: float = 0.6) -
 
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect("project_v.db", check_same_thread=False)
+        g.db = sqlite3.connect(DB_PATH, check_same_thread=False)
         g.db.row_factory = sqlite3.Row
     return g.db
 
@@ -493,7 +506,23 @@ def check_automations():
         db.commit()
 
 
+def keep_alive_ping():
+    """
+    Ping the app's own URL every 14 minutes to prevent Render free-tier
+    from spinning down the instance and stopping the scheduler.
+    Requires RENDER_EXTERNAL_URL or APP_URL to be set in env vars.
+    """
+    if not RENDER_EXTERNAL_URL:
+        return
+    try:
+        requests.get(f"{RENDER_EXTERNAL_URL}/", timeout=5)
+        print(f"[KEEP-ALIVE] Pinged {RENDER_EXTERNAL_URL}/ successfully")
+    except Exception as e:
+        print(f"[KEEP-ALIVE] Ping failed: {e}")
+
+
 scheduler.add_job(check_automations, "interval", minutes=1)
+scheduler.add_job(keep_alive_ping, "interval", minutes=14)
 
 with app.app_context():
     init_db()
@@ -674,6 +703,20 @@ def api_automation_details(auto_id):
             "keywords_json": row["keywords_json"],
         }
     )
+
+@app.route("/api/health")
+def api_health():
+    """Diagnostic endpoint — check scheduler and env var status on Render."""
+    import threading
+    apscheduler_threads = [t.name for t in threading.enumerate() if "APScheduler" in t.name]
+    return jsonify({
+        "scheduler_running": scheduler.running,
+        "apscheduler_threads": apscheduler_threads,
+        "gemini_key_set": bool(GEMINI_API_KEY),
+        "keep_alive_url": RENDER_EXTERNAL_URL,
+        "db_path": DB_PATH,
+        "pid": os.getpid(),
+    })
 
 @app.route("/api/notifications/mark-read", methods=["POST"])
 def api_notifications_mark_read():
